@@ -59,32 +59,75 @@ export interface Biochemistry {
 
 export interface Microbiology {
   influenzaA: string; 
+  influenzaANote: string;
   influenzaB: string;
+  influenzaBNote: string;
   rsv: string;
+  rsvNote: string;
   covid: string;
+  covidNote: string;
   hepB: string; // HBsAg
+  hepBNote: string;
   hepC: string; // HCV Ab
+  hepCNote: string;
   dengue: string;
+  dengueNote: string;
   notes: string;
 }
 
 export interface Urine {
   leukocytes: string;
+  leukocytesNote: string;
   nitrite: string;
+  nitriteNote: string;
   protein: string;
+  proteinNote: string;
   glucose: string;
+  glucoseNote: string;
   ketone: string;
+  ketoneNote: string;
   ph: string;
+  phNote: string;
   notes: string;
 }
 
 export interface Imaging {
   xray: string;
+  xrayNote: string;
   ultrasound: string; // Bung, tim, ...
+  ultrasoundNote: string;
   ct: string;
+  ctNote: string;
   mri: string;
+  mriNote: string;
   endoscopy: string; // Noi soi
+  endoscopyNote: string;
   notes: string;
+}
+
+export interface SymptomDetails {
+  // Fever
+  hasFever: boolean;
+  feverPattern: string; // Cơn, liên tục
+  maxTemp: string;
+  hasChills: boolean;
+  hasConvulsions: boolean;
+  
+  // Vomiting
+  hasVomiting: boolean;
+  vomitFrequency: string; // lần/ngày
+  vomitRelation: string; // sau ăn, tự nhiên
+  vomitCharacteristics: string[]; // thức ăn, dịch vàng, máu...
+  
+  // Stool
+  hasDiarrhea: boolean;
+  stoolFrequency: string; // lần/ngày
+  stoolCharacteristics: string[]; // toé nước, hoa cà hoa cải...
+  stoolBloodMucus: boolean;
+  
+  // Other
+  generalState: string[]; // Quấy khóc, mệt mỏi
+  otherSymptoms: string; // Đau đầu, đau bụng...
 }
 
 export interface MedicalRecord {
@@ -106,6 +149,7 @@ export interface MedicalRecord {
   historyDays: number;
   historyCourse: string[]; 
   historyNotes: string; 
+  symptomDetails: SymptomDetails; // Detailed structured history
 
   // III. Tiền sử
   para: string; 
@@ -163,6 +207,23 @@ export const INITIAL_RECORD: MedicalRecord = {
   historyDays: 1,
   historyCourse: [],
   historyNotes: '',
+  symptomDetails: {
+    hasFever: false,
+    feverPattern: 'Từng cơn',
+    maxTemp: '',
+    hasChills: false,
+    hasConvulsions: false,
+    hasVomiting: false,
+    vomitFrequency: '',
+    vomitRelation: '',
+    vomitCharacteristics: [],
+    hasDiarrhea: false,
+    stoolFrequency: '',
+    stoolCharacteristics: [],
+    stoolBloodMucus: false,
+    generalState: [],
+    otherSymptoms: ''
+  },
 
   para: '1001',
   birthWeight: '3000',
@@ -200,13 +261,31 @@ export const INITIAL_RECORD: MedicalRecord = {
       cholesterol: '', triglyceride: '', hdl: '', ldl: '', na: '', k: '', cl: '', ca: '', notes: ''
     },
     microbiology: {
-      influenzaA: 'Chưa làm', influenzaB: 'Chưa làm', rsv: 'Chưa làm', covid: 'Chưa làm', hepB: 'Chưa làm', hepC: 'Chưa làm', dengue: 'Chưa làm', notes: ''
+      influenzaA: 'Chưa làm', influenzaANote: '', 
+      influenzaB: 'Chưa làm', influenzaBNote: '',
+      rsv: 'Chưa làm', rsvNote: '',
+      covid: 'Chưa làm', covidNote: '',
+      hepB: 'Chưa làm', hepBNote: '',
+      hepC: 'Chưa làm', hepCNote: '',
+      dengue: 'Chưa làm', dengueNote: '',
+      notes: ''
     },
     urine: {
-      leukocytes: '', nitrite: '', protein: '', glucose: '', ketone: '', ph: '', notes: ''
+      leukocytes: '', leukocytesNote: '',
+      nitrite: '', nitriteNote: '',
+      protein: '', proteinNote: '',
+      glucose: '', glucoseNote: '',
+      ketone: '', ketoneNote: '',
+      ph: '', phNote: '',
+      notes: ''
     },
     imaging: {
-      xray: '', ultrasound: '', ct: '', mri: '', endoscopy: '', notes: ''
+      xray: '', xrayNote: '',
+      ultrasound: '', ultrasoundNote: '',
+      ct: '', ctNote: '',
+      mri: '', mriNote: '',
+      endoscopy: '', endoscopyNote: '',
+      notes: ''
     },
     otherLabs: ''
   },

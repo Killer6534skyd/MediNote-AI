@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Save, FileText, Sparkles, Stethoscope, Clipboard, Microscope, User, Baby, Printer, FlaskConical } from 'lucide-react';
 import { INITIAL_RECORD, MedicalRecord, Gender } from './types';
@@ -17,6 +18,11 @@ const ENT_OPTIONS = ['Họng đỏ', 'Amidan sưng đỏ', 'Có giả mạc', 'M
 const NEURO_OPTIONS = ['Hội chứng màng não (-)', 'Gáy cứng (+)', 'Kernig (+)', 'Phản xạ gân xương bình thường'];
 const TREATMENT_OPTIONS = ['Hạ sốt (Paracetamol)', 'Kháng sinh (Tiêm)', 'Kháng sinh (Uống)', 'Long đờm', 'Khí dung Ventolin', 'Khí dung Pulmicort', 'Bù dịch Oresol', 'Bù dịch IV (Ringer)', 'Men vi sinh', 'Kẽm', 'Thở oxy'];
 const DELIVERY_OPTIONS = [{value: 'Đẻ thường', label: 'Đẻ thường'}, {value: 'Đẻ mổ', label: 'Đẻ mổ'}, {value: 'Hỗ trợ (Forceps/Giác)', label: 'Hỗ trợ'}];
+const TEST_RESULT_OPTIONS = [
+  {value: 'Chưa làm', label: 'Chưa làm'}, 
+  {value: 'Âm tính', label: 'Âm tính'}, 
+  {value: 'Dương tính', label: 'Dương tính'}
+];
 
 const TABS = [
   { id: 'admin', label: 'Hành chính', icon: User },
@@ -56,6 +62,17 @@ const App: React.FC = () => {
           ...(prev[section] as any)[subsection],
           [field]: value
         }
+      }
+    }));
+  };
+
+  // Helper for SymptomDetails updates
+  const updateSymptom = (field: string, value: any) => {
+    setRecord(prev => ({
+      ...prev,
+      symptomDetails: {
+        ...prev.symptomDetails,
+        [field]: value
       }
     }));
   };
@@ -119,32 +136,78 @@ const App: React.FC = () => {
               />
               <Input label="Lý do chi tiết (Tự nhập)" value={record.chiefComplaintNotes} onChange={e => updateRecord('chiefComplaintNotes', e.target.value)} placeholder="Nhập thêm lý do..." />
               
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4 mt-6">
-                <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-2 mt-4">
                    <label className="text-sm font-semibold text-slate-700">Thời gian bệnh</label>
                    <span className="text-lg font-bold text-primary bg-white px-3 py-1 rounded-lg border">{record.historyDays} ngày</span>
-                </div>
-                <input 
+              </div>
+              <input 
                   type="range" min="1" max="14" 
                   value={record.historyDays} 
                   onChange={e => updateRecord('historyDays', parseInt(e.target.value))}
                   className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary mb-6"
-                />
-                
-                <MultiSelectChip 
-                  label="Triệu chứng (Chọn nhanh)" 
-                  options={SYMPTOM_OPTIONS} 
-                  selected={record.historyCourse} 
-                  onChange={val => updateRecord('historyCourse', val)} 
-                />
-                <TextArea
-                   label="Diễn biến bệnh (Tự nhập)" 
-                   value={record.historyNotes} 
-                   onChange={e => updateRecord('historyNotes', e.target.value)} 
-                   placeholder="VD: Trẻ sốt cơn, dùng hạ sốt đỡ ít. Ho tăng lên về đêm..." 
-                />
-              </div>
+              />
              </Card>
+
+             <Accordion title="Diễn biến chi tiết (Timeline)" defaultOpen>
+                <div className="space-y-4">
+                  {/* Fever Card */}
+                  <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="checkbox" checked={record.symptomDetails.hasFever} onChange={e => updateSymptom('hasFever', e.target.checked)} className="w-5 h-5 accent-orange-500"/>
+                      <h4 className="font-bold text-orange-700">Sốt</h4>
+                    </div>
+                    {record.symptomDetails.hasFever && (
+                      <div className="grid grid-cols-2 gap-3 mt-2 animate-in fade-in">
+                        <Select label="Tính chất" options={[{value: 'Từng cơn', label: 'Từng cơn'}, {value: 'Liên tục', label: 'Liên tục'}]} value={record.symptomDetails.feverPattern} onChange={e => updateSymptom('feverPattern', e.target.value)} />
+                        <Input label="Nhiệt độ Max" suffix="°C" value={record.symptomDetails.maxTemp} onChange={e => updateSymptom('maxTemp', e.target.value)} />
+                        <div className="col-span-2 flex gap-4 mt-1">
+                          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={record.symptomDetails.hasChills} onChange={e => updateSymptom('hasChills', e.target.checked)} className="accent-orange-500" /> Rét run</label>
+                          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={record.symptomDetails.hasConvulsions} onChange={e => updateSymptom('hasConvulsions', e.target.checked)} className="accent-orange-500" /> Co giật</label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vomiting Card */}
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="checkbox" checked={record.symptomDetails.hasVomiting} onChange={e => updateSymptom('hasVomiting', e.target.checked)} className="w-5 h-5 accent-blue-500"/>
+                      <h4 className="font-bold text-blue-700">Nôn trớ</h4>
+                    </div>
+                    {record.symptomDetails.hasVomiting && (
+                      <div className="space-y-3 mt-2 animate-in fade-in">
+                        <div className="grid grid-cols-2 gap-3">
+                          <Input label="Tần suất (lần/ngày)" value={record.symptomDetails.vomitFrequency} onChange={e => updateSymptom('vomitFrequency', e.target.value)} />
+                          <Input label="Liên quan bữa ăn" value={record.symptomDetails.vomitRelation} onChange={e => updateSymptom('vomitRelation', e.target.value)} placeholder="VD: sau ăn 2p" />
+                        </div>
+                        <MultiSelectChip label="Đặc điểm dịch nôn" options={['Thức ăn', 'Dịch vàng', 'Dịch trong', 'Lẫn máu', 'Mùi chua']} selected={record.symptomDetails.vomitCharacteristics} onChange={val => updateSymptom('vomitCharacteristics', val)} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stool Card */}
+                  <div className="bg-green-50 p-4 rounded-xl border border-green-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <input type="checkbox" checked={record.symptomDetails.hasDiarrhea} onChange={e => updateSymptom('hasDiarrhea', e.target.checked)} className="w-5 h-5 accent-green-500"/>
+                      <h4 className="font-bold text-green-700">Đại tiện / Tiêu chảy</h4>
+                    </div>
+                    {record.symptomDetails.hasDiarrhea && (
+                      <div className="space-y-3 mt-2 animate-in fade-in">
+                        <Input label="Số lần / ngày" value={record.symptomDetails.stoolFrequency} onChange={e => updateSymptom('stoolFrequency', e.target.value)} />
+                        <MultiSelectChip label="Tính chất phân" options={['Lỏng nước', 'Sệt', 'Hoa cà hoa cải', 'Phân sống', 'Mùi khắm']} selected={record.symptomDetails.stoolCharacteristics} onChange={val => updateSymptom('stoolCharacteristics', val)} />
+                        <label className="flex items-center gap-2 text-sm text-green-800 font-medium"><input type="checkbox" checked={record.symptomDetails.stoolBloodMucus} onChange={e => updateSymptom('stoolBloodMucus', e.target.checked)} className="accent-green-500" /> Có nhầy máu mũi</label>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* General */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                     <h4 className="font-bold text-slate-700 mb-2">Toàn trạng & Khác</h4>
+                     <MultiSelectChip label="Trạng thái" options={['Quấy khóc', 'Mệt mỏi', 'Li bì', 'Bỏ ăn/bú', 'Tiểu ít', 'Tiểu vàng']} selected={record.symptomDetails.generalState} onChange={val => updateSymptom('generalState', val)} />
+                     <Input label="Triệu chứng khác (Ho, đau bụng...)" value={record.symptomDetails.otherSymptoms} onChange={e => updateSymptom('otherSymptoms', e.target.value)} />
+                  </div>
+                </div>
+             </Accordion>
 
              <Card>
                <SectionTitle>Tiền sử</SectionTitle>
@@ -206,6 +269,68 @@ const App: React.FC = () => {
         );
 
       case 'labs':
+        const renderTestRow = (label: string, field: string, noteField: string, options = TEST_RESULT_OPTIONS) => (
+          <div className="flex gap-2 items-start mb-3">
+            <div className="w-1/3">
+              <Select 
+                label={label}
+                options={options} 
+                value={(record.labs.microbiology as any)[field] || 'Chưa làm'}
+                onChange={e => updateDeep('labs', 'microbiology', field, e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            <div className="w-2/3">
+              <Input 
+                label={`Ghi chú ${label}`} 
+                value={(record.labs.microbiology as any)[noteField] || ''}
+                onChange={e => updateDeep('labs', 'microbiology', noteField, e.target.value)}
+                placeholder="CT, chỉ số..."
+                className="text-sm"
+              />
+            </div>
+          </div>
+        );
+
+        const renderUrineRow = (label: string, field: string, noteField: string) => (
+          <div className="flex gap-2 items-start mb-3">
+            <div className="w-1/3">
+              <Input 
+                label={label}
+                value={(record.labs.urine as any)[field] || ''}
+                onChange={e => updateDeep('labs', 'urine', field, e.target.value)}
+                className="text-sm"
+              />
+            </div>
+            <div className="w-2/3">
+              <Input 
+                label={`Ghi chú ${label}`} 
+                value={(record.labs.urine as any)[noteField] || ''}
+                onChange={e => updateDeep('labs', 'urine', noteField, e.target.value)}
+                placeholder="Kết quả cụ thể..."
+                className="text-sm"
+              />
+            </div>
+          </div>
+        );
+
+        const renderImagingRow = (label: string, field: string, noteField: string) => (
+          <div className="grid grid-cols-1 mb-4 border-b border-slate-100 pb-4 last:border-0">
+             <TextArea 
+               label={`${label} (Mô tả)`}
+               value={(record.labs.imaging as any)[field] || ''}
+               onChange={e => updateDeep('labs', 'imaging', field, e.target.value)}
+               placeholder={`Mô tả kết quả ${label}...`}
+             />
+             <Input 
+               label="Kết luận / Ghi chú ngắn"
+               value={(record.labs.imaging as any)[noteField] || ''}
+               onChange={e => updateDeep('labs', 'imaging', noteField, e.target.value)}
+               placeholder="VD: Viêm phổi, Gan to..."
+             />
+          </div>
+        );
+
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             {/* Hematology Accordion */}
@@ -256,43 +381,39 @@ const App: React.FC = () => {
                 <TextArea label="Ghi chú sinh hóa" value={record.labs.biochemistry.notes} onChange={e => updateDeep('labs', 'biochemistry', 'notes', e.target.value)} />
              </Accordion>
 
-             {/* Urine & Micro */}
-             <Accordion title="3. Nước tiểu & Vi sinh">
-               <div className="grid grid-cols-2 gap-3 mb-4">
-                  <Input label="BC Niệu" value={record.labs.urine.leukocytes} onChange={e => updateDeep('labs', 'urine', 'leukocytes', e.target.value)} />
-                  <Input label="Protein Niệu" value={record.labs.urine.protein} onChange={e => updateDeep('labs', 'urine', 'protein', e.target.value)} />
-                  <Input label="Nitrite" value={record.labs.urine.nitrite} onChange={e => updateDeep('labs', 'urine', 'nitrite', e.target.value)} />
-                  <Input label="pH" value={record.labs.urine.ph} onChange={e => updateDeep('labs', 'urine', 'ph', e.target.value)} />
-               </div>
-               <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
-                  <Select 
-                    label="Virus RSV" 
-                    options={[{value: 'Chưa làm', label: 'Chưa làm'}, {value: 'Âm tính', label: 'Âm tính'}, {value: 'Dương tính', label: 'Dương tính'}]} 
-                    value={record.labs.microbiology.rsv}
-                    onChange={e => updateDeep('labs', 'microbiology', 'rsv', e.target.value)}
-                  />
-                  <Select 
-                    label="Cúm A/B" 
-                    options={[{value: 'Chưa làm', label: 'Chưa làm'}, {value: 'Âm tính', label: 'Âm tính'}, {value: 'Dương tính A', label: 'Dương tính A'}]} 
-                    value={record.labs.microbiology.influenzaA}
-                    onChange={e => updateDeep('labs', 'microbiology', 'influenzaA', e.target.value)}
-                  />
-                  <Input label="Viêm gan B (HBsAg)" value={record.labs.microbiology.hepB} onChange={e => updateDeep('labs', 'microbiology', 'hepB', e.target.value)} />
-               </div>
+             {/* Microbiology Accordion */}
+             <Accordion title="3. Vi sinh (Test nhanh/PCR)">
+               {renderTestRow("Virus RSV", "rsv", "rsvNote")}
+               {renderTestRow("Cúm A (Flu A)", "influenzaA", "influenzaANote")}
+               {renderTestRow("Cúm B (Flu B)", "influenzaB", "influenzaBNote")}
+               {renderTestRow("Covid-19", "covid", "covidNote")}
+               {renderTestRow("Sốt xuất huyết (Dengue)", "dengue", "dengueNote")}
+               {renderTestRow("Viêm gan B (HBsAg)", "hepB", "hepBNote")}
+               {renderTestRow("Viêm gan C (HCV)", "hepC", "hepCNote")}
              </Accordion>
 
-             <Card>
-               <SectionTitle>4. Chẩn đoán hình ảnh & Khác</SectionTitle>
-               <TextArea label="X-Quang tim phổi" value={record.labs.imaging.xray} onChange={e => updateDeep('labs', 'imaging', 'xray', e.target.value)} placeholder="VD: Dày tổ chức kẽ rốn phổi..." />
-               <TextArea label="Siêu âm (Bụng/Tim...)" value={record.labs.imaging.ultrasound} onChange={e => updateDeep('labs', 'imaging', 'ultrasound', e.target.value)} />
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                 <TextArea label="CT Scanner" value={record.labs.imaging.ct} onChange={e => updateDeep('labs', 'imaging', 'ct', e.target.value)} />
-                 <TextArea label="MRI" value={record.labs.imaging.mri} onChange={e => updateDeep('labs', 'imaging', 'mri', e.target.value)} />
-               </div>
+             {/* Urine Accordion */}
+             <Accordion title="4. Tổng phân tích nước tiểu">
+               {renderUrineRow("Bạch cầu (LEU)", "leukocytes", "leukocytesNote")}
+               {renderUrineRow("Hồng cầu (ERY)", "erythrocytes", "erythrocytesNote")}
+               {renderUrineRow("Nitrite (NIT)", "nitrite", "nitriteNote")}
+               {renderUrineRow("Protein (PRO)", "protein", "proteinNote")}
+               {renderUrineRow("Glucose (GLU)", "glucose", "glucoseNote")}
+               {renderUrineRow("Ketone (KET)", "ketone", "ketoneNote")}
+               {renderUrineRow("pH", "ph", "phNote")}
+             </Accordion>
+
+             {/* Imaging Accordion */}
+             <Accordion title="5. Chẩn đoán hình ảnh">
+               {renderImagingRow("X-Quang", "xray", "xrayNote")}
+               {renderImagingRow("Siêu âm", "ultrasound", "ultrasoundNote")}
+               {renderImagingRow("CT Scanner", "ct", "ctNote")}
+               {renderImagingRow("MRI", "mri", "mriNote")}
+               {renderImagingRow("Nội soi", "endoscopy", "endoscopyNote")}
                <div className="mt-4 pt-4 border-t border-slate-100">
                   <TextArea label="Các xét nghiệm khác (Gen, Ký sinh trùng...)" value={record.labs.otherLabs} onChange={e => updateNested('labs', 'otherLabs', e.target.value)} />
                </div>
-             </Card>
+             </Accordion>
           </div>
         );
 
@@ -355,8 +476,9 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
-             <button onClick={() => generatePDF(record)} className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors" title="Xuất PDF">
-                <Printer className="w-5 h-5" />
+             <button onClick={() => generatePDF(record)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-all shadow-sm" title="Xuất Kết Quả">
+                <Printer className="w-4 h-4" />
+                <span className="hidden sm:inline">Xuất Kết Quả</span>
              </button>
              <button onClick={handleAIAnalysis} className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition-colors" title="AI Phân tích">
                 <Sparkles className="w-5 h-5" />
