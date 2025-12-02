@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
-import { Save, FileText, Sparkles, Stethoscope, Clipboard, Microscope, User, Baby, Printer, FlaskConical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Save, FileText, Sparkles, Stethoscope, Clipboard, Microscope, User, Baby, Printer, FlaskConical, Folder, Upload, Download, Trash2, Search } from 'lucide-react';
 import { INITIAL_RECORD, MedicalRecord, Gender } from './types';
 import { Input, TextArea, Select, MultiSelectChip, SectionTitle, Card, Accordion } from './components/FormElements';
-import { analyzeMedicalRecord } from './services/geminiService';
+import { analyzeMedicalRecord, suggestDiagnosis, suggestTreatment } from './services/geminiService';
 import { generatePDF } from './services/pdfService';
+import { saveRecordToLocal, getSavedRecords, deleteRecord, exportRecordToFile, importRecordFromFile } from './services/storageService';
 import ReactMarkdown from 'react-markdown';
 
 // --- DATA OPTIONS ---
@@ -38,6 +39,18 @@ const App: React.FC = () => {
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  const [analysisTitle, setAnalysisTitle] = useState('AI Phân tích & Gợi ý');
+  
+  // Storage State
+  const [showStorageModal, setShowStorageModal] = useState(false);
+  const [savedRecords, setSavedRecords] = useState<MedicalRecord[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    if (showStorageModal) {
+      setSavedRecords(getSavedRecords());
+    }
+  }, [showStorageModal]);
 
   const updateRecord = (field: keyof MedicalRecord, value: any) => {
     setRecord(prev => ({ ...prev, [field]: value }));
@@ -66,7 +79,6 @@ const App: React.FC = () => {
     }));
   };
 
-  // Helper for SymptomDetails updates
   const updateSymptom = (field: string, value: any) => {
     setRecord(prev => ({
       ...prev,
@@ -78,11 +90,66 @@ const App: React.FC = () => {
   };
 
   const handleAIAnalysis = async () => {
+    setAnalysisTitle('AI Tổng hợp Bệnh án');
     setIsAnalyzing(true);
     setShowAnalysisModal(true);
     const result = await analyzeMedicalRecord(record);
     setAiAnalysis(result);
     setIsAnalyzing(false);
+  };
+
+  const handleSuggestDiagnosis = async () => {
+    setAnalysisTitle('AI Gợi ý Chẩn đoán');
+    setIsAnalyzing(true);
+    setShowAnalysisModal(true);
+    const result = await suggestDiagnosis(record);
+    setAiAnalysis(result);
+    setIsAnalyzing(false);
+  };
+
+  const handleSuggestTreatment = async () => {
+    setAnalysisTitle('AI Gợi ý Điều trị');
+    setIsAnalyzing(true);
+    setShowAnalysisModal(true);
+    const result = await suggestTreatment(record);
+    setAiAnalysis(result);
+    setIsAnalyzing(false);
+  };
+
+  // Storage Handlers
+  const handleSave = () => {
+    if (!record.patientName) {
+      alert("Vui lòng nhập tên bệnh nhân trước khi lưu!");
+      return;
+    }
+    const saved = saveRecordToLocal(record);
+    setRecord(saved);
+    alert("Đã lưu hồ sơ thành công!");
+  };
+
+  const handleLoadRecord = (r: MedicalRecord) => {
+    setRecord(r);
+    setShowStorageModal(false);
+  };
+
+  const handleDeleteRecord = (id: string) => {
+    if (confirm("Bạn có chắc muốn xóa hồ sơ này?")) {
+      deleteRecord(id);
+      setSavedRecords(getSavedRecords());
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const importedRecord = await importRecordFromFile(file);
+        setRecord(importedRecord);
+        alert("Đã nhập hồ sơ thành công!");
+      } catch (err) {
+        alert("Lỗi khi nhập file. Vui lòng kiểm tra định dạng.");
+      }
+    }
   };
 
   const renderTabContent = () => {
@@ -421,7 +488,13 @@ const App: React.FC = () => {
         return (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
              <Card className="border-l-4 border-l-primary">
-               <SectionTitle>Chẩn đoán</SectionTitle>
+               <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Chẩn đoán</h3>
+                 <button onClick={handleSuggestDiagnosis} className="flex items-center gap-1 text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors">
+                   <Sparkles className="w-4 h-4" />
+                   <span>Gợi ý AI</span>
+                 </button>
+               </div>
                <Input 
                  label="Chẩn đoán xác định" 
                  value={record.diagnosis} 
@@ -437,7 +510,13 @@ const App: React.FC = () => {
              </Card>
 
              <Card>
-               <SectionTitle>Hướng xử trí</SectionTitle>
+               <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                 <h3 className="text-lg font-bold text-slate-800 uppercase tracking-tight">Hướng xử trí</h3>
+                 <button onClick={handleSuggestTreatment} className="flex items-center gap-1 text-sm font-medium text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors">
+                   <Sparkles className="w-4 h-4" />
+                   <span>Gợi ý AI</span>
+                 </button>
+               </div>
                <MultiSelectChip 
                   label="Y lệnh điều trị (Chọn nhanh)" 
                   options={TREATMENT_OPTIONS} 
@@ -476,6 +555,12 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
+             <button onClick={() => setShowStorageModal(true)} className="p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors" title="Quản lý Hồ sơ">
+                <Folder className="w-5 h-5" />
+             </button>
+             <button onClick={handleSave} className="p-2 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-full transition-colors" title="Lưu lại">
+                <Save className="w-5 h-5" />
+             </button>
              <button onClick={() => generatePDF(record)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg transition-all shadow-sm" title="Xuất Kết Quả">
                 <Printer className="w-4 h-4" />
                 <span className="hidden sm:inline">Xuất Kết Quả</span>
@@ -518,6 +603,64 @@ const App: React.FC = () => {
         </div>
       </nav>
 
+      {/* Storage Modal */}
+      {showStorageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-lg flex items-center gap-2"><Folder className="w-5 h-5 text-primary" /> Quản lý Hồ sơ</h3>
+              <button onClick={() => setShowStorageModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100">×</button>
+            </div>
+            
+            <div className="p-4 border-b border-slate-100 bg-slate-50">
+               <div className="flex gap-2">
+                 <label className="flex-1 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:border-primary hover:text-primary cursor-pointer transition-all shadow-sm">
+                    <Upload className="w-4 h-4" />
+                    <span>Nhập file Backup</span>
+                    <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+                 </label>
+                 <button onClick={() => exportRecordToFile(record)} className="flex-1 flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:border-primary hover:text-primary transition-all shadow-sm">
+                    <Download className="w-4 h-4" />
+                    <span>Sao lưu (Drive/File)</span>
+                 </button>
+               </div>
+               <div className="mt-3 relative">
+                 <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                 <input 
+                   type="text" 
+                   placeholder="Tìm kiếm bệnh nhân..." 
+                   className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-primary"
+                   value={searchTerm}
+                   onChange={e => setSearchTerm(e.target.value)}
+                 />
+               </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2">
+              {savedRecords.filter(r => r.patientName.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                <div className="text-center py-8 text-slate-400">Chưa có hồ sơ nào được lưu.</div>
+              ) : (
+                <div className="space-y-2">
+                  {savedRecords.filter(r => r.patientName.toLowerCase().includes(searchTerm.toLowerCase())).map(r => (
+                    <div key={r.id} className="p-3 bg-white border border-slate-100 rounded-xl hover:border-primary/30 hover:shadow-md transition-all flex justify-between items-center group">
+                      <div onClick={() => handleLoadRecord(r)} className="cursor-pointer flex-1">
+                        <div className="font-bold text-slate-800">{r.patientName || 'Chưa đặt tên'}</div>
+                        <div className="text-xs text-slate-500">
+                          {new Date(r.lastModified).toLocaleDateString()} • {r.gender} • {r.ageMonth} tháng
+                        </div>
+                      </div>
+                      <button onClick={() => handleDeleteRecord(r.id)} className="p-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Modal */}
       {showAnalysisModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -525,7 +668,7 @@ const App: React.FC = () => {
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-50 to-white rounded-t-2xl">
               <div className="flex items-center gap-2 text-indigo-700 font-bold text-lg">
                 <Sparkles className="w-5 h-5" />
-                <span>AI Phân tích & Gợi ý</span>
+                <span>{analysisTitle}</span>
               </div>
               <button onClick={() => setShowAnalysisModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold text-xl">×</button>
             </div>

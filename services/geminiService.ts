@@ -5,65 +5,95 @@ const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 export const analyzeMedicalRecord = async (record: MedicalRecord): Promise<string> => {
-  if (!apiKey) {
-    return "⚠️ Lỗi: Chưa cấu hình API Key. Vui lòng kiểm tra cài đặt môi trường.";
-  }
+  if (!apiKey) return "⚠️ Lỗi: Chưa cấu hình API Key.";
 
   const prompt = `
-    Đóng vai trò là một Bác sĩ Nhi khoa Trưởng khoa giàu kinh nghiệm. 
-    Phân tích dữ liệu bệnh án chi tiết dưới đây để hỗ trợ bác sĩ trực:
+    Đóng vai trò là một Bác sĩ Nhi khoa Trưởng khoa. Phân tích dữ liệu:
+    - BN: ${record.patientName}, ${record.ageMonth} tháng, ${record.gender}. ${record.vitals.weight}kg.
+    - Lý do: ${record.chiefComplaint.join(', ')}.
+    - Bệnh sử (${record.historyDays} ngày): ${record.historyCourse.join(', ')}. ${record.historyNotes}.
+    - Tiền sử: ${record.historyPathology}.
+    - Khám: ${record.generalCondition.join(', ')}, ${record.respiratoryExam.join(', ')}, ${record.digestiveExam.join(', ')}. ${record.otherExam}.
+    - CLS: WBC ${record.labs.hematology.wbc}, CRP ${record.labs.hematology.notes}, RSV ${record.labs.microbiology.rsv}, XQ ${record.labs.imaging.xray}.
 
-    --- THÔNG TIN BỆNH ÁN ---
-    Tên: ${record.patientName}, ${record.ageMonth} tháng tuổi, Giới: ${record.gender}.
-    Lý do vào viện: ${record.chiefComplaint.join(', ')}. ${record.chiefComplaintNotes}.
-    
-    1. BỆNH SỬ: 
-    - ${record.historyDays} ngày.
-    - Diễn biến: ${record.historyCourse.join(', ')}.
-    - Ghi chú: ${record.historyNotes}.
-
-    2. TIỀN SỬ:
-    - PARA: ${record.para}, Sinh ${record.deliveryType} ${record.birthWeek}w, ${record.birthWeight}g.
-    - Bệnh lý: ${record.historyPathology}.
-
-    3. KHÁM LÂM SÀNG:
-    - Mạch: ${record.vitals.heartRate}, Nhiệt: ${record.vitals.temperature}, Thở: ${record.vitals.respiratoryRate}, SpO2: ${record.vitals.spO2}%.
-    - Toàn thân: ${record.generalCondition.join(', ')}. Da: ${record.skinExam.join(', ')}.
-    - Hô hấp: ${record.respiratoryExam.join(', ')}.
-    - Tiêu hóa: ${record.digestiveExam.join(', ')}.
-    - Khám khác: ${record.otherExam}. ${record.examNotes}.
-
-    4. CẬN LÂM SÀNG (LABS):
-    - Huyết học: WBC ${record.labs.hematology.wbc}, NEU ${record.labs.hematology.neu}%, RBC ${record.labs.hematology.rbc}, HGB ${record.labs.hematology.hgb}, PLT ${record.labs.hematology.plt}.
-    - Sinh hóa: CRP ${record.labs.hematology.notes}, Glucose ${record.labs.biochemistry.glucose}, Ure ${record.labs.biochemistry.ure}, Crea ${record.labs.biochemistry.creatinin}, AST/ALT ${record.labs.biochemistry.ast}/${record.labs.biochemistry.alt}, Na/K ${record.labs.biochemistry.na}/${record.labs.biochemistry.k}.
-    - Vi sinh: RSV ${record.labs.microbiology.rsv}, Cúm ${record.labs.microbiology.influenzaA}.
-    - Hình ảnh: ${record.labs.imaging.xray}, ${record.labs.imaging.ultrasound}.
-
-    --- YÊU CẦU ---
-    Trả về định dạng Markdown:
-    1. **Tóm tắt bệnh án (Summary)**: Nêu bật các triệu chứng dương tính và kết quả xét nghiệm bất thường.
-    2. **Biện luận Chẩn đoán**: 
-       - Đánh giá sự phù hợp của các triệu chứng với chẩn đoán sơ bộ.
-       - Phân tích kết quả CLS (ví dụ: Bạch cầu tăng cao hay bình thường? Men gan có tăng không? Điện giải có rối loạn không?).
-    3. **Đề xuất xử trí**: 
-       - Điều trị cụ thể (dựa trên hướng dẫn Nhi khoa).
-       - Đề xuất xét nghiệm bổ sung nếu thiếu (ví dụ: khí máu, cấy máu nếu nghi ngờ nhiễm trùng nặng).
-
-    Giọng văn chuyên nghiệp, ngắn gọn.
+    Yêu cầu (Markdown):
+    1. **Tóm tắt**: Triệu chứng dương tính & CLS bất thường.
+    2. **Biện luận**: Phân tích logic lâm sàng.
+    3. **Hướng xử trí nhanh**: Đề xuất ban đầu.
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
-      config: {
-        thinkingConfig: { thinkingBudget: 0 } 
-      }
     });
-
-    return response.text || "Không thể tạo phân tích.";
+    return response.text || "Không thể phân tích.";
   } catch (error) {
-    console.error("Gemini Analysis Error:", error);
-    return "Đã xảy ra lỗi khi kết nối với AI. Vui lòng kiểm tra đường truyền.";
+    return "Lỗi kết nối AI.";
+  }
+};
+
+export const suggestDiagnosis = async (record: MedicalRecord): Promise<string> => {
+  if (!apiKey) return "⚠️ Lỗi: Chưa cấu hình API Key.";
+
+  const prompt = `
+    Bạn là chuyên gia chẩn đoán bệnh học Nhi khoa. Dựa trên hồ sơ sau, hãy đưa ra chẩn đoán xác định và chẩn đoán phân biệt.
+    
+    DỮ LIỆU BỆNH NHÂN:
+    - Tuổi/Giới: ${record.ageMonth} tháng, ${record.gender}.
+    - Lâm sàng nổi bật: ${record.chiefComplaint.join(', ')}. ${record.historyCourse.join(', ')}. ${record.respiratoryExam.join(', ')}. ${record.digestiveExam.join(', ')}.
+    - Dấu hiệu sinh tồn: Sốt ${record.vitals.temperature} độ, SpO2 ${record.vitals.spO2}%.
+    - Cận lâm sàng quan trọng: 
+      + Huyết học: WBC ${record.labs.hematology.wbc} (Neu ${record.labs.hematology.neu}%), CRP ${record.labs.hematology.notes}.
+      + Vi sinh: RSV ${record.labs.microbiology.rsv}, Cúm ${record.labs.microbiology.influenzaA}, Dengue ${record.labs.microbiology.dengue}.
+      + Hình ảnh: ${record.labs.imaging.xray}, ${record.labs.imaging.ultrasound}.
+
+    NHIỆM VỤ:
+    1. **Chẩn đoán xác định**: (Kèm mã ICD-10 nếu có thể). Giải thích ngắn gọn tại sao (dựa trên bằng chứng nào trong hồ sơ).
+    2. **Chẩn đoán phân biệt**: Liệt kê 2-3 bệnh lý khác cần loại trừ và lý do.
+    3. **Đề xuất làm thêm**: Nếu thiếu bằng chứng, cần làm thêm xét nghiệm gì?
+  `;
+
+  try {
+    // Using gemini-3-pro-preview for complex reasoning tasks like diagnosis
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+    });
+    return response.text || "Không thể đưa ra gợi ý chẩn đoán.";
+  } catch (error) {
+    return "Lỗi kết nối AI khi chẩn đoán.";
+  }
+};
+
+export const suggestTreatment = async (record: MedicalRecord): Promise<string> => {
+  if (!apiKey) return "⚠️ Lỗi: Chưa cấu hình API Key.";
+
+  const prompt = `
+    Bạn là bác sĩ điều trị Nhi khoa. Hãy đề xuất phác đồ điều trị chi tiết.
+    
+    THÔNG TIN:
+    - Bệnh nhân: ${record.ageMonth} tháng, Cân nặng: ${record.vitals.weight} kg (Rất quan trọng để tính liều).
+    - Chẩn đoán hiện tại: ${record.diagnosis} (Nếu chưa có, dựa trên: ${record.chiefComplaint.join(', ')}).
+    - Tình trạng: ${record.generalCondition.join(', ')}. Sốt ${record.vitals.temperature}, SpO2 ${record.vitals.spO2}.
+    - Tiền sử dị ứng: ${record.historyAllergy}.
+
+    YÊU CẦU:
+    Đưa ra y lệnh điều trị cụ thể (Tên thuốc, Hàm lượng, Liều dùng theo cân nặng ${record.vitals.weight}kg, Cách dùng):
+    1. **Điều trị nguyên nhân**: (Kháng sinh/Kháng virus nếu cần). Tính toán liều chính xác.
+    2. **Điều trị triệu chứng**: Hạ sốt, Bù dịch (tính lượng dịch nhu cầu), Long đờm, v.v.
+    3. **Chăm sóc & Dinh dưỡng**: Chế độ ăn, theo dõi.
+    4. **Dấu hiệu cảnh báo**: Khi nào cần gọi bác sĩ ngay.
+  `;
+
+  try {
+    // Using gemini-3-pro-preview for precise calculation and protocol adherence
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: prompt,
+    });
+    return response.text || "Không thể đưa ra gợi ý điều trị.";
+  } catch (error) {
+    return "Lỗi kết nối AI khi gợi ý điều trị.";
   }
 };

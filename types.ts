@@ -1,3 +1,4 @@
+
 export enum Gender {
   MALE = 'Nam',
   FEMALE = 'Nữ'
@@ -131,6 +132,9 @@ export interface SymptomDetails {
 }
 
 export interface MedicalRecord {
+  id: string; // Unique ID for storage
+  lastModified: number; // Timestamp
+
   // I. Hành chính
   patientName: string;
   dob: string;
@@ -191,6 +195,8 @@ export interface MedicalRecord {
 }
 
 export const INITIAL_RECORD: MedicalRecord = {
+  id: '',
+  lastModified: Date.now(),
   patientName: '',
   dob: '',
   ageMonth: '',
