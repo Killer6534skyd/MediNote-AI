@@ -162,7 +162,9 @@ export interface MedicalRecord {
   deliveryType: string; 
   vaccination: string;
   historyAllergy: string;
-  historyPathology: string; 
+  historyPathology: string;
+  historyFamily: string;
+  historyEpidemiology: string; 
   nutrition: string; 
   pastHistoryNotes: string; // Free text (Renamed from historyNotes)
 
@@ -238,6 +240,8 @@ export const INITIAL_RECORD: MedicalRecord = {
   vaccination: 'Đủ theo TCMR',
   historyAllergy: 'Chưa phát hiện',
   historyPathology: 'Khỏe mạnh',
+  historyFamily: 'Khỏe mạnh',
+  historyEpidemiology: 'Chưa phát hiện',
   nutrition: 'Cơm nát/Cháo',
   pastHistoryNotes: '', // Renamed from historyNotes
 

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ChevronDown, Check, Circle, ChevronUp } from 'lucide-react';
 
@@ -100,6 +101,69 @@ export const MultiSelectChip: React.FC<MultiSelectChipProps> = ({ label, options
           );
         })}
       </div>
+    </div>
+  );
+};
+
+interface BinaryStatusInputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  negativeValue?: string;
+}
+
+export const BinaryStatusInput: React.FC<BinaryStatusInputProps> = ({ 
+  label, 
+  value, 
+  onChange, 
+  placeholder,
+  negativeValue = 'Chưa phát hiện' 
+}) => {
+  const isPositive = value && 
+                     value !== negativeValue && 
+                     value !== 'Bình thường' && 
+                     value !== 'Khỏe mạnh' && 
+                     value !== 'Không có';
+
+  return (
+    <div className="mb-4">
+      <div className="flex justify-between items-center mb-2">
+        <label className="block text-sm font-semibold text-slate-700">{label}</label>
+        <div className="flex bg-slate-100 p-0.5 rounded-lg">
+          <button
+            type="button"
+            onClick={() => onChange(negativeValue)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${!isPositive ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Bình thường
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+                if (!isPositive) onChange('');
+            }}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${isPositive ? 'bg-white text-red-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Bất thường
+          </button>
+        </div>
+      </div>
+      
+      {isPositive ? (
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full px-4 py-2.5 bg-white border border-red-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all text-sm animate-in fade-in slide-in-from-top-1"
+          autoFocus
+        />
+      ) : (
+         <div className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm text-slate-400 italic">
+          {value || negativeValue}
+        </div>
+      )}
     </div>
   );
 };

@@ -7,10 +7,17 @@ export const saveRecordToLocal = (record: MedicalRecord): MedicalRecord => {
   const records = getSavedRecords();
   const timestamp = Date.now();
   
-  // Ensure ID exists
+  // Ensure ID exists with fallback
+  const generateId = () => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return Date.now().toString() + Math.random().toString(36).substring(2);
+  };
+
   const recordToSave = {
     ...record,
-    id: record.id || crypto.randomUUID(),
+    id: record.id || generateId(),
     lastModified: timestamp
   };
 
@@ -29,7 +36,9 @@ export const saveRecordToLocal = (record: MedicalRecord): MedicalRecord => {
 export const getSavedRecords = (): MedicalRecord[] => {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    const records = data ? JSON.parse(data) : [];
+    // Sort by lastModified descending (newest first)
+    return records.sort((a: any, b: any) => (b.lastModified || 0) - (a.lastModified || 0));
   } catch (error) {
     console.error("Error reading storage", error);
     return [];
@@ -38,12 +47,12 @@ export const getSavedRecords = (): MedicalRecord[] => {
 
 export const deleteRecord = (id: string) => {
   const records = getSavedRecords();
-  const newRecords = records.filter(r => r.id !== id);
+  const newRecords = records.filter((r: any) => r.id !== id);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(newRecords));
 };
 
 export const exportRecordToFile = (record: MedicalRecord) => {
-  const fileName = `HSBA_${record.patientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+  const fileName = `HSBA_${(record.patientName || 'Unnamed').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
   const jsonStr = JSON.stringify(record, null, 2);
   const blob = new Blob([jsonStr], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -64,7 +73,7 @@ export const importRecordFromFile = (file: File): Promise<MedicalRecord> => {
       try {
         const json = JSON.parse(e.target?.result as string);
         // Basic validation
-        if (json.patientName !== undefined && json.vitals !== undefined) {
+        if (json && typeof json === 'object') {
           resolve(json as MedicalRecord);
         } else {
           reject(new Error("File không đúng định dạng bệnh án."));

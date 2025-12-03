@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Save, FileText, Sparkles, Stethoscope, Clipboard, Microscope, User, Baby, Printer, FlaskConical, Folder, Upload, Download, Trash2, Search } from 'lucide-react';
+import { Save, FileText, Sparkles, Stethoscope, Clipboard, Microscope, User, Baby, Printer, FlaskConical, Folder, Upload, Download, Trash2, Search, Plus } from 'lucide-react';
 import { INITIAL_RECORD, MedicalRecord, Gender } from './types';
-import { Input, TextArea, Select, MultiSelectChip, SectionTitle, Card, Accordion } from './components/FormElements';
+import { Input, TextArea, Select, MultiSelectChip, SectionTitle, Card, Accordion, BinaryStatusInput } from './components/FormElements';
 import { analyzeMedicalRecord, suggestDiagnosis, suggestTreatment } from './services/geminiService';
 import { generatePDF } from './services/pdfService';
 import { saveRecordToLocal, getSavedRecords, deleteRecord, exportRecordToFile, importRecordFromFile } from './services/storageService';
@@ -125,6 +125,13 @@ const App: React.FC = () => {
     const saved = saveRecordToLocal(record);
     setRecord(saved);
     alert("Đã lưu hồ sơ thành công!");
+  };
+
+  const handleNewRecord = () => {
+    if (confirm("Tạo hồ sơ mới? Dữ liệu hiện tại nếu chưa lưu sẽ bị mất.")) {
+      setRecord({ ...INITIAL_RECORD, id: '', lastModified: Date.now() });
+      setActiveTab('admin');
+    }
   };
 
   const handleLoadRecord = (r: MedicalRecord) => {
@@ -278,16 +285,48 @@ const App: React.FC = () => {
 
              <Card>
                <SectionTitle>Tiền sử</SectionTitle>
-               <div className="grid grid-cols-3 gap-3 mb-4">
+               
+               {/* Basic Pregnancy History */}
+               <div className="grid grid-cols-3 gap-3 mb-6">
                   <div className="col-span-1"><Input label="PARA" value={record.para} onChange={e => updateRecord('para', e.target.value)} placeholder="1001" /></div>
                   <div className="col-span-2"><Select label="Hình thức sinh" options={DELIVERY_OPTIONS} value={record.deliveryType} onChange={e => updateRecord('deliveryType', e.target.value)} /></div>
+                  <div className="col-span-1"><Input label="Tuổi thai (tuần)" type="number" suffix="tuần" value={record.birthWeek} onChange={e => updateRecord('birthWeek', e.target.value)} /></div>
+                  <div className="col-span-1"><Input label="CN sơ sinh (g)" type="number" suffix="g" value={record.birthWeight} onChange={e => updateRecord('birthWeight', e.target.value)} /></div>
                </div>
-               <div className="grid grid-cols-2 gap-3">
-                  <Input label="Tuổi thai (tuần)" type="number" suffix="tuần" value={record.birthWeek} onChange={e => updateRecord('birthWeek', e.target.value)} />
-                  <Input label="CN sơ sinh (g)" type="number" suffix="g" value={record.birthWeight} onChange={e => updateRecord('birthWeight', e.target.value)} />
+
+               {/* New Detailed History Fields */}
+               <BinaryStatusInput 
+                 label="Tiền sử Gia đình" 
+                 value={record.historyFamily} 
+                 onChange={val => updateRecord('historyFamily', val)} 
+                 placeholder="VD: Bố bị hen phế quản, Mẹ viêm mũi dị ứng..."
+               />
+               
+               <BinaryStatusInput 
+                 label="Tiền sử Dịch tễ" 
+                 value={record.historyEpidemiology} 
+                 onChange={val => updateRecord('historyEpidemiology', val)} 
+                 placeholder="VD: Tiếp xúc người cúm A, khu vực có sốt xuất huyết..."
+               />
+
+               <BinaryStatusInput 
+                 label="Tiền sử Dị ứng" 
+                 value={record.historyAllergy} 
+                 onChange={val => updateRecord('historyAllergy', val)} 
+                 placeholder="VD: Dị ứng đạm sữa bò, kháng sinh, thời tiết..."
+               />
+
+               <BinaryStatusInput 
+                 label="Tiền sử Dinh dưỡng" 
+                 value={record.nutrition} 
+                 onChange={val => updateRecord('nutrition', val)} 
+                 placeholder="VD: Bú mẹ hoàn toàn, ăn dặm kém..."
+               />
+
+               <div className="mt-4">
+                 <Input label="Tiêm chủng" value={record.vaccination} onChange={e => updateRecord('vaccination', e.target.value)} />
+                 <Input label="Tiền sử bệnh lý bản thân" value={record.historyPathology} onChange={e => updateRecord('historyPathology', e.target.value)} />
                </div>
-               <Input label="Tiêm chủng" value={record.vaccination} onChange={e => updateRecord('vaccination', e.target.value)} />
-               <Input label="Tiền sử bệnh lý" value={record.historyPathology} onChange={e => updateRecord('historyPathology', e.target.value)} />
              </Card>
           </div>
         );
@@ -555,6 +594,9 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
+             <button onClick={handleNewRecord} className="p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors" title="Tạo hồ sơ mới">
+                <Plus className="w-5 h-5" />
+             </button>
              <button onClick={() => setShowStorageModal(true)} className="p-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors" title="Quản lý Hồ sơ">
                 <Folder className="w-5 h-5" />
              </button>
